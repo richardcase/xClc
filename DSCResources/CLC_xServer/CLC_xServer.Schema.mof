@@ -1,0 +1,22 @@
+[ClassVersion("1.0.0"), FriendlyName("xFirewall")]
+class CLC_xServer : OMI_BaseResource
+{
+  [Key, Description("Name of the server")] String Name;
+  [Key, Description("The data center for the server")] String DataCenter;
+  [Key, Description("The account alias to use")] String AccountAlias;
+  [Write, Description("User defined description")] String Description;
+  [Write, Description("ID of the parent group")] string GroupID;
+  [Write, Description("ID of the server to use as a source")] string SourceServerID;
+  [Write, Description("Create the server as managed or not")] Boolean IsManagedOS;
+  [Write, Description("Whether to add managed backup to the server")] Boolean IsManagedBackup;
+  [Write, Description("Primary DNS to set on the server")] string PrimaryDns;
+  [Write, Description("Secondary DNS to set on the server")] string SecondaryDns;
+  [Write, Description("ID of the network to which to deploy the server")] string NetworkID;
+  [Write, Description("IP address to assign to the server")] string IPAddress;
+  [Write, Description("Password of administrator or root user on server")] string Password;
+  [Write, Description("Number of processors to configure the server with")] sint32 CPU;
+  [Write, Description("Number of GB of memory to configure the server with")] sint32 MemoryGB;
+  [Write, Description("Type of server"), ValueMap{"Standard", "Hyperscale", "BareMetal"},Values{"standard", "hyperscale", "bareMetal"}] String ServerType;
+  [Write, Description("Baremetal configuration identifier")] string ConfugurationId;
+  [Write, Description("Baremetal OS to provision")] string OSType;
+};
