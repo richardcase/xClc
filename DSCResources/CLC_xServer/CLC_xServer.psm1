@@ -5,6 +5,19 @@ Write-Verbose -Message "CurrentPath: $currentPath"
 Import-Module $currentPath\..\..\xClcHelper.psm1 -Verbose:$false -ErrorAction Stop
 
 
+<# 
+    .SYNOPSIS
+        Returns the current status of the CLC server
+
+    .PARAMETER Name
+        The name of the server
+
+    .PARAMETER DataCenter
+        The name of the data center
+
+    .PARAMETER ClcCredential
+        Credential to be used when connecting to CLC
+#>
 function Get-TargetResource
 {
     [CmdletBinding()]
@@ -20,7 +33,7 @@ function Get-TargetResource
         $DataCenter,
 
         [Parameter(Mandatory = $true)]
-        [Systen.String]
-        $AccountAlias
+        [System.Management.Automation.PSCredential]
+        $ClcCredential
     )
 }
