@@ -1,7 +1,7 @@
 # Set Global Module Verbose
 $VerbosePreference = 'Continue'
 
-$configDir = "$Env:AppData\WindowsPowerShell\Modules\xClc\0.1"
+$configDir = "$env:USERPROFILE\Documents\xClc\0.1"
 $configPath = "$configDir\Config.ps1xml"
 
 if (!(Test-Path -PathType Container -Path $configDir))
