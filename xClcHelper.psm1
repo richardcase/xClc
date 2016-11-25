@@ -9,6 +9,12 @@ if (!(Test-Path -PathType Container -Path $configDir))
     New-Item -ItemType Directory -Path $configDir
 }
 
+<#
+    .SYNOPSIS
+        Connects to CLC and saves credentials for caching.
+    .PARAMETER ClcCredential
+        Credentials to use when connecting to CLC.  
+#>
 function Connect-CLC
 {
     [CmdletBinding()]
@@ -79,9 +85,56 @@ function Invoke-ClcRequest
     param
     (
         [ValidateNotNull()]
+        [System.String]
+        $Url,
+
+        [ValidateNotNull()]
+        [System.String]
+        $Body,
+
+        #TODO: add validation
+        [ValidateNotNull()]
+        [System.String]
+        $Method,
+
+        [ValidateNotNull()]
         [System.Management.Automation.PSCredential]
         $ClcCredential
     )
+
+    $Method = $Method.ToUpper();
+
+    $accountDetails = Connect-CLC $ClcCredential
+
+    $client = New-Object System.Net.Http.HttpClient
+    
+    $header = New-Object System.Net.Http.Headers.MediaTypeWithQualityHeaderValue "application/json"
+    $client.DefaultRequestHeaders.Accept.Add($header)
+
+    $token = ConvertFrom-SecureString $accountDetails.Token
+    $authHeader = New-Object System.Net.Http.AuthenticationHeaderValue "Bearer", $token
+    client.DefaultRequestHeaders.Authorization = $authHeader
+    
+    $content = New-Object System.Net.Http.StringContent $Body, $null, "application/json" 
+    if ($Method -eq "GET") {
+        $result = $client.GetAsync($Url).Result
+    } elseif ($Method -eq "POST") {
+        $result = $client.PostAsync($Url, $content).Result
+    } elseif ($Method -eq "PUT") {
+        $result = $client.PutAsync($Url, $content).Result
+    } elseif ($Method -eq "DELETE") {
+        $result = $client.DeleteAsync($Url).Result
+    } else {
+        Throw "Invalid method passed: $Method"
+    }
+    
+    if ($result.StatusCode -eq 200)
+    {
+        return $result.Content.ReadAsStringAsync().Result | ConvertFrom-Json
+    } else {
+        Throw "Error executing Clc API request. Status code returned: $result.StatusCode $Method $Url"
+    }
+
 }
 
 <#

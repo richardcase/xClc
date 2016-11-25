@@ -36,4 +36,10 @@ function Get-TargetResource
         [System.Management.Automation.PSCredential]
         $ClcCredential
     )
+
+    $Name = $Name.ToUpper()
+
+    Connect-Clc $ClcCredential
+
+
 }
