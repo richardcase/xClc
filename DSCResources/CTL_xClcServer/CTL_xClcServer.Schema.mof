@@ -1,5 +1,5 @@
-[ClassVersion("1.0.0"), FriendlyName("xFirewall")]
-class CLC_xServer : OMI_BaseResource
+[ClassVersion("1.0.0"), FriendlyName("xClcServer")]
+class CTL_xClcServer : OMI_BaseResource
 {
   [Key, Description("Name of the server")] String Name;
   [Key, Description("The data center for the server")] String DataCenter;

@@ -1,6 +1,11 @@
 # Set Global Module Verbose
 $VerbosePreference = 'Continue'
 
+# Load Localization Data 
+Import-LocalizedData LocalizedData -filename xClc.strings.psd1 -ErrorAction SilentlyContinue 
+Import-LocalizedData USLocalizedData -filename xClc.strings.psd1 -UICulture en-US -ErrorAction SilentlyContinue
+
+# Create the config directory 
 $configDir = "$env:USERPROFILE\Documents\xClc\0.1"
 $configPath = "$configDir\Config.ps1xml"
 
@@ -28,7 +33,7 @@ function Connect-CLC
     if ($ClcCredential)
     {
         if (Test-Path $configPath) {
-            New-VerboseMessage "Cached CLC credential found, importing"
+            New-VerboseMessage "Cached CLC credential found, importing. $configPath"
             try {
                 $accountDetails = Import-Clixml -Path $configPath -ErrorAction STOP
                 #TODO: add username/pwd validation and timeout
@@ -40,20 +45,18 @@ function Connect-CLC
         
         if ($accountDetails -eq $null)
         {
-            $client = New-Object System.Net.Http.HttpClient
-            $header = New-Object System.Net.Http.Headers.MediaTypeWithQualityHeaderValue "application/json"
-            $client.DefaultRequestHeaders.Accept.Add($header)
             $user = $ClcCredential.GetNetworkCredential().UserName
             $pwd = $ClcCredential.GetNetworkCredential().Password
             $body = "{ `"username`":`"$user`", `"password`":`"$pwd`" }"
-            $content = New-Object System.Net.Http.StringContent $body, $null, "application/json" 
-            $result = $client.PostAsync("https://api.ctl.io/v2/authentication/login", $content).Result
 
-            if ($result.StatusCode -eq 200)
+            $response = Invoke-WebRequest -Uri "https://api.ctl.io/v2/authentication/login" -Method Post -Body $body -ContentType "application/json" -UserAgent "xClc Powershell"
+
+
+            if ($response.StatusCode -eq 200)
             {
-                $results = $result.Content.ReadAsStringAsync().Result | ConvertFrom-Json | select bearerToken, accountAlias
+                $results = $response.Content | ConvertFrom-Json | select bearerToken, accountAlias
+                
                 $date = Get-Date
-
                 $props = @{
                     Alias = $results.accountAlias
                     Token = ConvertTo-SecureString $results.bearerToken -AsPlainText -Force
@@ -92,8 +95,8 @@ function Invoke-ClcRequest
         [System.String]
         $Body,
 
-        #TODO: add validation
         [ValidateNotNull()]
+        [ValidateSet('Get', 'Post', 'Put','Delete')]
         [System.String]
         $Method,
 
@@ -101,40 +104,41 @@ function Invoke-ClcRequest
         [System.Management.Automation.PSCredential]
         $ClcCredential
     )
-
-    $Method = $Method.ToUpper();
-
     $accountDetails = Connect-CLC $ClcCredential
 
-    $client = New-Object System.Net.Http.HttpClient
-    
-    $header = New-Object System.Net.Http.Headers.MediaTypeWithQualityHeaderValue "application/json"
-    $client.DefaultRequestHeaders.Accept.Add($header)
+    $credential = New-Object System.Management.Automation.PSCredential("user", $accountDetails.Token)
+    $beareHeader = "Bearer " + $credential.GetNetworkCredential().Password
 
-    $token = ConvertFrom-SecureString $accountDetails.Token
-    $authHeader = New-Object System.Net.Http.AuthenticationHeaderValue "Bearer", $token
-    client.DefaultRequestHeaders.Authorization = $authHeader
-    
-    $content = New-Object System.Net.Http.StringContent $Body, $null, "application/json" 
-    if ($Method -eq "GET") {
-        $result = $client.GetAsync($Url).Result
-    } elseif ($Method -eq "POST") {
-        $result = $client.PostAsync($Url, $content).Result
-    } elseif ($Method -eq "PUT") {
-        $result = $client.PutAsync($Url, $content).Result
-    } elseif ($Method -eq "DELETE") {
-        $result = $client.DeleteAsync($Url).Result
-    } else {
-        Throw "Invalid method passed: $Method"
-    }
-    
-    if ($result.StatusCode -eq 200)
+    if (($Method -eq "Get") -or ($Method -eq "Delete") )
     {
-        return $result.Content.ReadAsStringAsync().Result | ConvertFrom-Json
+        $response = Invoke-WebRequest -Uri $Url -Method $Method -ContentType "application/json" -UserAgent "xClc Powershell" -Headers @{Authorization = $beareHeader}
     } else {
-        Throw "Error executing Clc API request. Status code returned: $result.StatusCode $Method $Url"
+        $response = Invoke-WebRequest -Uri $Url -Method $Method -Body $body -ContentType "application/json" -UserAgent "xClc Powershell" -Headers @{Authorization = $beareHeader}
+    }
+    
+    
+    if ($response.StatusCode -eq 200)
+    {
+        return $response.Content | ConvertFrom-Json
+    } else {
+        Throw "Error executing Clc API request. Status code returned: $response.StatusCode $Method $Url"
+    }
+}
+
+function Get-ClcCredentials
+{
+    if (Test-Path $configPath) {
+        New-VerboseMessage "Cached CLC credential found, importing. $configPath"
+        try {
+            $accountDetails = Import-Clixml -Path $configPath -ErrorAction STOP
+            #TODO: add username/pwd validation and timeout
+        }
+        catch {
+            New-WarningMessage "Corrupt CLC credential file. Please delete"
+        }
     }
 
+    return $accountDetails
 }
 
 <#
