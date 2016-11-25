@@ -116,12 +116,18 @@ function Invoke-ClcRequest
         $response = Invoke-WebRequest -Uri $Url -Method $Method -Body $body -ContentType "application/json" -UserAgent "xClc Powershell" -Headers @{Authorization = $beareHeader}
     }
     
-    
-    if ($response.StatusCode -eq 200)
+    $returnCode = $response.StatusCode
+    switch ($returnCode)
     {
-        return $response.Content | ConvertFrom-Json
-    } else {
-        Throw "Error executing Clc API request. Status code returned: $response.StatusCode $Method $Url"
+        200 { return $response.Content | ConvertFrom-Json }
+        201 { return $response.Content | ConvertFrom-Json }
+        202 { return $response.Content | ConvertFrom-Json }
+        204 { return  }
+        400 { throw New-TerminatingError -ErrorType ResponseBadRequest -ErrorCategory SyntaxError  }
+        401 { throw New-TerminatingError -ErrorType ResponseUnauthorised -ErrorCategory AuthenticationError }
+        403 { throw New-TerminatingError -ErrorType ResponseForbidden  -ErrorCategory SecurityError }
+        404 { throw New-TerminatingError -ErrorType ResponseNotFound -FormatArgs @($Url) -ErrorCategory ObjectNotFound }
+        500 { throw New-TerminatingError -ErrorType ResponseServerError  -ErrorCategory DeviceError }
     }
 }
 

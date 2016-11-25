@@ -39,7 +39,9 @@ function Get-TargetResource
 
     $Name = $Name.ToUpper()
 
-    Connect-Clc $ClcCredential
+    $url = https://api.ctl.io/v2/servers/{accountAlias}/{serverId}
+
+    $response = Invoke-ClcRequest 
 
 
 }
